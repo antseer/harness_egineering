@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/ec2-user/lion/harness_egineering/logs/.4e05e359251bca02925d5cf6d794479109281542-audit.json",
+    "files": [
+        {
+            "date": 1774756349583,
+            "name": "/home/ec2-user/lion/harness_egineering/logs/mcp-puppeteer-2026-03-29.log",
+            "hash": "b4a5f654c1a5488770a4aeaa10f79c3aff81af9d4713416cb16307b5fb983b83"
+        },
+        {
+            "date": 1774843885104,
+            "name": "/home/ec2-user/lion/harness_egineering/logs/mcp-puppeteer-2026-03-30.log",
+            "hash": "d427d03d878ac1b999de27b9d59b312e1998fbf6c4260158555cd4b112c2f792"
+        },
+        {
+            "date": 1774925764343,
+            "name": "/home/ec2-user/lion/harness_egineering/logs/mcp-puppeteer-2026-03-31.log",
+            "hash": "15490ae7e1c3bf0dc18cab01b3ad2662a4cd60413ccb09ea6b8933dda40e6a31"
+        }
+    ],
+    "hashType": "sha256"
+}
