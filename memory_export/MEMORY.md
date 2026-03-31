@@ -1,0 +1,5 @@
+- [Harness Engineering 研究项目](project_harness_engineering.md) — 项目背景、两次会话成果、三层飞轮模型、核心发现
+- [Harness Skill 设计与飞轮架构](project_harness_skills.md) — 4个全局 Skill 的联动机制、.harness/ 数据中心、关键设计决策
+- [用户画像](user_profile.md) — 偏好中文、关注 AI Agent/Harness Engineering 领域
+- [输出语言偏好](feedback_chinese_output.md) — 用户要求默认中文输出
+- [关键参考来源](reference_key_sources.md) — OpenAI/Anthropic/LangChain 等核心文献链接
