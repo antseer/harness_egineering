@@ -24,8 +24,9 @@ argument-hint: "[task description, e.g. 实现用户认证系统]"
 2. 读取 `CLAUDE.md`（如果存在）理解项目架构和禁令
 3. 读取 `.harness/config.json`（如果存在）获取技术栈和命令信息
 4. 读取 `.harness/review-log.md`（如果存在）——**关键**：了解历史失败模式，在规划时主动规避
-5. 探索相关代码，理解当前状态
-6. 如果任务描述不够清晰，向用户提问以澄清范围
+5. 读取 `.harness/phase-journal.jsonl`（如果存在）——统计历史 Phase 的平均文件变更数和重试次数，用于校准本次 Phase 粒度。例如：历史平均每 Phase 改 8 个文件且重试 2 次，则本次应缩小 Phase 范围
+6. 探索相关代码，理解当前状态
+7. 如果任务描述不够清晰，向用户提问以澄清范围
 
 ### Step 2：拆分 Phase
 

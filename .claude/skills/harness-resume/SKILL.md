@@ -115,17 +115,37 @@ argument-hint: "[optional: specific phase to execute, e.g. Phase 3]"
 
 ### Step 6：交接提示
 
-Phase 完成后，根据自检结果给出差异化提示：
+Phase 完成后，根据自检结果给出差异化提示。**智能判断是否需要新会话**：
 
-**正常情况**：
+**判断逻辑**：如果本 Phase 满足以下**全部**条件，提示"可继续本会话"：
+- 重试 0 次（一次通过）
+- 文件变更 < 5 个
+- 无 CLAUDE.md 更新
+- 下一个 Phase 预估文件变更也 < 5 个（从 plan.md 步骤数推算）
+
+否则，推荐新会话（上下文已消耗较多，干净重启更可靠）。
+
+**轻量 Phase（满足条件）**：
+```
+✅ Phase [M+1] 已完成，plan.md 已更新。
+📝 CLAUDE.md 无需更新
+📊 执行数据已记录到 .harness/phase-journal.jsonl
+
+本 Phase 较轻量（[N] 个文件变更，0 次重试），可继续本会话。
+下一步：
+  • 继续本会话（推荐）：告诉我"继续"
+  • 开新会话：输入 /harness-resume
+```
+
+**正常 Phase（不满足条件）**：
 ```
 ✅ Phase [M+1] 已完成，plan.md 已更新。
 📝 CLAUDE.md [已同步更新 / 无需更新]
 📊 执行数据已记录到 .harness/phase-journal.jsonl
 
 下一步：
-  • 继续本会话：告诉我"继续"
   • 开新会话（推荐）：输入 /harness-resume
+  • 继续本会话：告诉我"继续"
 ```
 
 **发现问题时**：
