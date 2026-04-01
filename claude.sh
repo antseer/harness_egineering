@@ -1,1 +1,1 @@
-claude --resume a0d7bc02-98bb-40c4-9cdb-667bf35d0cc4 
+claude --resume fe1a5678-77e8-4e00-9057-974d450d44c6                                                                                                                             /buddy
