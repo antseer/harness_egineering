@@ -80,6 +80,100 @@ Harness Engineering 是一个新兴的 AI/LLM 工程学科，研究如何为 AI 
 - **Mitchell Hashimoto** — Harness 概念的早期提出者
 - **Andrej Karpathy** — Context Engineering 概念的推广者
 
+## Harness Skills 使用示例
+
+本仓库提供 4 个 Claude Code Skills，形成持续改进的飞轮：
+
+```
+harness-init → harness-plan → harness-resume → harness-review
+   初始化          规划            执行接力          深度改进
+                                                    │
+                  └──────── 飞轮循环 ←───────────────┘
+```
+
+### 1. `/harness-init` — 项目初始化
+
+进入新项目时，一键生成 CLAUDE.md 和 Harness 基础设施：
+
+```
+> /harness-init python-fastapi
+
+✅ 已生成：
+  CLAUDE.md                    ← 项目导航地图（架构、命令、禁令）
+  .harness/config.json         ← 技术栈元信息
+  .harness/review-log.md       ← 改进日志
+  .harness/phase-journal.jsonl ← 执行日志
+
+💡 推荐 Hook 配置：
+  PostEdit: "ruff check --fix {file}"
+  PreCommit: "pytest tests/ -x -q"
+```
+
+### 2. `/harness-plan` — 大任务规划
+
+超过 30 分钟的任务，先拆解为多个 Phase，生成 `plan.md` 作为跨会话接力棒：
+
+```
+> /harness-plan 实现用户认证系统（JWT + OAuth2）
+
+📋 已生成 plan.md：
+  Phase 1: 数据模型 + 迁移              [待做]
+    - 创建 User model (src/models/user.py)
+    - 编写迁移脚本
+    - 验证：pytest tests/test_models.py
+
+  Phase 2: JWT 认证 API                 [待做]
+    - 实现 /login, /register 端点
+    - ⚠️ 历史教训：记得更新 i18n 文件
+    - 验证：pytest tests/test_auth.py
+
+  Phase 3: OAuth2 集成 + E2E 测试       [待做]
+    ...
+```
+
+### 3. `/harness-resume` — 跨会话接力
+
+开新会话继续未完成的工作，自动读取 plan.md 并执行下一个 Phase：
+
+```
+> /harness-resume
+
+📊 当前进度：Phase 1 ✅ | Phase 2 ⬜ | Phase 3 ⬜
+🎯 开始执行 Phase 2: JWT 认证 API
+
+... (执行任务) ...
+
+✅ Phase 2 已完成，plan.md 已更新。
+📝 CLAUDE.md 已同步更新（新增了 auth 模块）
+📊 执行数据已记录到 .harness/phase-journal.jsonl
+
+下一步：
+  • 继续本会话：告诉我"继续"
+  • 开新会话（推荐）：输入 /harness-resume
+```
+
+### 4. `/harness-review` — 深度改进
+
+分析执行数据，发现反复出现的问题，自动改进 CLAUDE.md：
+
+```
+> /harness-review
+
+🔍 飞轮健康度报告：
+  Phase 总数: 12
+  平均重试次数: 1.2 (↓ 上次 2.1)
+  一次通过率: 75% (↑ 上次 58%)
+
+🔧 发现 2 个可改进项：
+  P0: Claude 经常忘记更新 i18n 文件（出现 4 次）
+      → CLAUDE.md 新增禁令："修改用户可见文本时必须同步更新 locales/"
+
+  P1: 测试文件命名不一致（出现 2 次）
+      → CLAUDE.md 新增规则："测试文件统一使用 test_*.py 命名"
+
+✅ CLAUDE.md 已更新，review-log.md 已记录
+```
+
 ## 快速开始
 
 本仓库为纯文档项目，无需安装依赖。直接阅读上方指南即可。
@@ -87,8 +181,12 @@ Harness Engineering 是一个新兴的 AI/LLM 工程学科，研究如何为 AI 
 如需安装 Harness Skills 到 Claude Code：
 
 ```bash
+git clone https://github.com/antseer/harness_egineering.git
+cd harness_egineering
 ./install-skills.sh
 ```
+
+安装后 Skills 全局生效，在任何项目中输入 `/harness-init` 即可开始。
 
 ## License
 
