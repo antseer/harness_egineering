@@ -16,6 +16,15 @@ argument-hint: "[optional: specific phase to execute, e.g. Phase 3]"
 
 **Announce at start:** "正在使用 harness-resume 技能恢复跨会话任务。"
 
+**授权提示**：如需跳过所有 `Allow?` 授权确认，在启动时使用 `--approve` 标志：
+```
+claude --approve /harness-resume
+```
+或
+```
+/fixed [any work request]  →  tells Claude "I approve all operations in this session, don't ask"
+```
+
 ## 执行流程
 
 ### Step 1：读取状态
