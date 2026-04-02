@@ -40,6 +40,15 @@ Harness Engineering 是一个新兴的 AI/LLM 工程学科，研究如何为 AI 
 | [CLAUDE_CODE_HARNESS_实践指南.md](CLAUDE_CODE_HARNESS_实践指南.md) | 面向 Claude Code 用户的 Harness 落地手册 |
 | [HARNESS_SKILLS_使用指南.md](HARNESS_SKILLS_使用指南.md) | Harness Skills 安装与使用指南 |
 
+### Skill 源码
+
+| 目录 | 说明 |
+|------|------|
+| [skills/harness-init/](skills/harness-init/) | 项目初始化 Skill — 生成 CLAUDE.md 和 Harness 基础设施 |
+| [skills/harness-plan/](skills/harness-plan/) | 大任务规划 Skill — 支持多 Plan 并行（`plan-{name}.md`） |
+| [skills/harness-resume/](skills/harness-resume/) | 跨会话接力 Skill — 自动发现并恢复命名 Plan |
+| [skills/harness-review/](skills/harness-review/) | 深度改进 Skill — 分析执行数据，改进 CLAUDE.md |
+
 ### 示例项目
 
 | 目录 | 说明 |
@@ -109,14 +118,14 @@ harness-init → harness-plan → harness-resume → harness-review
   PreCommit: "pytest tests/ -x -q"
 ```
 
-### 2. `/harness-plan` — 大任务规划
+### 2. `/harness-plan` — 大任务规划（支持多 Plan 并行）
 
-超过 30 分钟的任务，先拆解为多个 Phase，生成 `plan.md` 作为跨会话接力棒：
+超过 30 分钟的任务，先拆解为多个 Phase，生成 `plan-{name}.md` 作为跨会话接力棒。**同一目录下可并行推进多个 Plan**：
 
 ```
-> /harness-plan 实现用户认证系统（JWT + OAuth2）
+> /harness-plan auth 实现用户认证系统（JWT + OAuth2）
 
-📋 已生成 plan.md：
+📋 已生成 plan-auth.md：
   Phase 1: 数据模型 + 迁移              [待做]
     - 创建 User model (src/models/user.py)
     - 编写迁移脚本
@@ -129,27 +138,36 @@ harness-init → harness-plan → harness-resume → harness-review
 
   Phase 3: OAuth2 集成 + E2E 测试       [待做]
     ...
+
+> /harness-plan payments 接入 Stripe 支付
+📋 已生成 plan-payments.md（与 plan-auth.md 并行推进）
 ```
 
-### 3. `/harness-resume` — 跨会话接力
+### 3. `/harness-resume` — 跨会话接力（智能选择 Plan）
 
-开新会话继续未完成的工作，自动读取 plan.md 并执行下一个 Phase：
+开新会话继续未完成的工作。指定 plan name 或自动发现：
 
 ```
-> /harness-resume
+# 指定 plan 恢复
+> /harness-resume auth
 
+📋 计划：auth — 用户认证系统
 📊 当前进度：Phase 1 ✅ | Phase 2 ⬜ | Phase 3 ⬜
-🎯 开始执行 Phase 2: JWT 认证 API
+📂 其他活跃计划：plan-payments.md (Phase 0/2)
 
+🎯 开始执行 Phase 2: JWT 认证 API
 ... (执行任务) ...
 
-✅ Phase 2 已完成，plan.md 已更新。
-📝 CLAUDE.md 已同步更新（新增了 auth 模块）
-📊 执行数据已记录到 .harness/phase-journal.jsonl
+✅ Phase 2 已完成，plan-auth.md 已更新。
+📊 执行数据已记录到 .harness/phase-journal.jsonl (plan: auth)
 
-下一步：
-  • 继续本会话：告诉我"继续"
-  • 开新会话（推荐）：输入 /harness-resume
+# 无参数时自动发现
+> /harness-resume
+
+发现 2 个活跃计划：
+  1. plan-auth.md     — 用户认证 (Phase 1/3 已完成)
+  2. plan-payments.md — Stripe 支付 (Phase 0/2 已完成)
+请选择要继续的计划：
 ```
 
 ### 4. `/harness-review` — 深度改进
