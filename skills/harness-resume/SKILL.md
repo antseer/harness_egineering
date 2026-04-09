@@ -100,7 +100,7 @@ argument-hint: "[plan-name] [optional: Phase N, e.g. auth Phase 3]"
 - CLAUDE.md 的项目结构、架构规则、文件对应关系是否需要同步更新？
 - 如果需要更新，**直接更新 CLAUDE.md**（不只是建议），并告知用户改了什么
 
-#### 5b. 执行质量自检
+#### 5b. 执行质量自检（含五条铁律）
 回答以下问题（内部评估，不需要展示全部细节）：
 
 | 检查项 | 评估 |
@@ -109,6 +109,18 @@ argument-hint: "[plan-name] [optional: Phase N, e.g. auth Phase 3]"
 | 是否违反了 CLAUDE.md 中的禁令？ | 是/否 |
 | 是否有步骤执行顺序与计划不一致？ | 是/否 |
 | 是否遇到了计划中未预见的问题？ | 是/否 |
+
+**五条铁律检查**（必须逐条验证，不满足的标记为 ⚠️）：
+
+| 铁律 | 适用条件 | 检查方式 | 状态 |
+|------|---------|---------|------|
+| Mock 过深 = 未测试 | 测试 mock 了 subprocess/docker/httpx | 确认被 mock 路径有独立 smoke test | ✅/⚠️ |
+| 编译通过 ≠ 功能正确 | 改了前端文件 | `grep -r 'MOCK_\|mock' frontend/src/app/` 无匹配 | ✅/⚠️/N/A |
+| 环境假设必须验证 | 代码依赖容器/外部 CLI | Phase 开始时用命令验证了依赖存在 | ✅/⚠️/N/A |
+| Schema 改动必须 HTTP 验证 | 改了 schemas/ | 用 curl 发了真实 HTTP 请求 | ✅/⚠️/N/A |
+| 多模块集成必须 smoke test | Phase 涉及 2+ 模块 | 启动真实服务做了端到端测试 | ✅/⚠️/N/A |
+
+**如果有任何铁律标记为 ⚠️，必须在 Phase 标记完成前修复。**
 
 #### 5c. 写入飞轮日志
 
