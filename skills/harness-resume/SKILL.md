@@ -79,6 +79,23 @@ argument-hint: "[plan-name] [optional: Phase N, e.g. auth Phase 3]"
 4. 如果执行时发现步骤描述不够具体，可以在 plan-{name}.md 中细化当前步骤的描述，但不改变 Phase 整体范围
 5. 每完成一个步骤，立即在 plan-{name}.md 中标记 `[x]`
 
+**Probe 步骤的执行规则**（标记为 🔬 的步骤）：
+
+Probe 是极简验证脚本，用于在投入实现之前验证关键假设。遇到 Probe 步骤时：
+
+1. **写极简脚本**：单文件，<100 行，聚焦验证一个假设，必须有量化输出（数字对比）
+2. **运行并记录结果**：将 Probe 结果摘要写入 plan-{name}.md 的决策记录
+3. **根据结果选择分支**：
+   - 假设成立 → 执行 plan 中的正常路径
+   - 假设不成立 → 执行 plan 中标注的备选路径；如果备选路径不存在或不明确，**暂停向用户确认新方向**
+4. **清理**：Probe 脚本验证完毕后删除，不进入代码库
+5. **更新 Plan**：如果 Probe 结果导致后续步骤变化，立即更新 plan-{name}.md 中受影响的步骤
+
+**Probe 设计原则**：
+- 必须有**对照组**（如 方案A vs 方案B、有负载 vs 无负载），单组数据不足以得出结论
+- 输出必须是**量化指标**（次数、延迟、成功率），而非"能/不能"
+- 运行时间控制在 **2 分钟以内**——Probe 是为了快速获得信号，不是完整测试
+
 ### Step 4：Phase 结束 — 更新 plan-{name}.md
 
 每个 Phase 执行完毕后，必须更新 plan-{name}.md：
@@ -136,10 +153,20 @@ argument-hint: "[plan-name] [optional: Phase N, e.g. auth Phase 3]"
   "files_changed": ["src/models/user.py", "tests/test_models.py"],
   "decisions": ["使用 bcrypt 而非 argon2"],
   "issues": ["发现 SQLAlchemy 版本需要升级"],
+  "probes": [
+    {
+      "hypothesis": "共享 WS 实例导致现货数据饥饿",
+      "result": "confirmed",
+      "data": "共享: 14次/60s, 独立: 47次/60s (+235%)",
+      "impact": "选择独立实例方案而非重构 batch 模式"
+    }
+  ],
   "claude_md_updated": true,
   "quality_notes": "测试一次通过，CLAUDE.md 已同步更新项目结构"
 }
 ```
+
+**`probes` 字段说明**：记录本 Phase 执行的 Probe 验证。每个 Probe 包含假设、结果（confirmed/refuted/partial）、关键数据、对方案的影响。该字段可选——无 Probe 步骤时省略。
 
 **注意**：`"plan"` 字段是必填的，用于区分不同 plan 的日志条目。
 

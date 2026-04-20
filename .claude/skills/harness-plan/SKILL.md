@@ -1,32 +1,45 @@
 ---
 name: harness-plan
-description: Use when starting a large task that will span multiple sessions - creates a plan.md with phased breakdown, decision log, and session handoff structure for cross-session relay
-argument-hint: "[task description, e.g. 实现用户认证系统]"
+description: Use when starting a large task that will span multiple sessions - creates a named plan file (plan-{name}.md) with phased breakdown, decision log, and session handoff structure for cross-session relay. Supports multiple parallel plans in the same project.
+argument-hint: "[plan-name] [task description, e.g. auth 实现用户认证系统]"
 ---
 
 # Harness Plan — 大任务分阶段规划
 
 ## Overview
 
-将大任务拆分为多个 Phase，生成 `plan.md` 作为跨会话接力的"接力棒"。
+将大任务拆分为多个 Phase，生成 `plan-{name}.md` 作为跨会话接力的"接力棒"。**支持同一目录下多个 Plan 并行推进。**
 
 **核心原则**：一个 Phase 一个会话，每个会话的 Claude 都是"干净的大脑 + 完整的地图"。上下文重置优于上下文压缩。
 
-**飞轮定位**：本 Skill 消费 CLAUDE.md（了解架构）和 `.harness/review-log.md`（避免重蹈覆辙），产出 plan.md 供 harness-resume 消费。
+**飞轮定位**：本 Skill 消费 CLAUDE.md（了解架构）和 `.harness/review-log.md`（避免重蹈覆辙），产出 plan-{name}.md 供 harness-resume 消费。
 
 **Announce at start:** "正在使用 harness-plan 技能为任务制定跨会话执行计划。"
+
+## Plan 命名规则
+
+**`$ARGUMENTS` 解析**：第一个词作为 plan name，其余为任务描述。
+
+- `/harness-plan auth 实现用户认证系统` → name=`auth`，文件=`plan-auth.md`
+- `/harness-plan payments 接入 Stripe 支付` → name=`payments`，文件=`plan-payments.md`
+- `/harness-plan 实现用户认证系统`（未提供 name）→ 从任务描述自动生成短 name（如 `user-auth`），文件=`plan-user-auth.md`
+
+**命名约束**：name 只允许小写字母、数字、连字符，长度 ≤ 20 字符。
+
+**向后兼容**：如果项目根目录已存在旧的 `plan.md`（无 name 后缀），在汇报时提示用户该文件存在，建议迁移为 `plan-{name}.md` 格式。
 
 ## 执行流程
 
 ### Step 1：收集上下文
 
-1. 读取用户提供的任务描述：`$ARGUMENTS`
-2. 读取 `CLAUDE.md`（如果存在）理解项目架构和禁令
-3. 读取 `.harness/config.json`（如果存在）获取技术栈和命令信息
-4. 读取 `.harness/review-log.md`（如果存在）——**关键**：了解历史失败模式，在规划时主动规避
-5. 读取 `.harness/phase-journal.jsonl`（如果存在）——统计历史 Phase 的平均文件变更数和重试次数，用于校准本次 Phase 粒度。例如：历史平均每 Phase 改 8 个文件且重试 2 次，则本次应缩小 Phase 范围
-6. 探索相关代码，理解当前状态
-7. 如果任务描述不够清晰，向用户提问以澄清范围
+1. 解析 `$ARGUMENTS`，提取 plan name 和任务描述
+2. 检查 `plan-{name}.md` 是否已存在——如果存在，**警告用户**并询问是覆盖还是换名
+3. 读取 `CLAUDE.md`（如果存在）理解项目架构和禁令
+4. 读取 `.harness/config.json`（如果存在）获取技术栈和命令信息
+5. 读取 `.harness/review-log.md`（如果存在）——**关键**：了解历史失败模式，在规划时主动规避
+6. 读取 `.harness/phase-journal.jsonl`（如果存在）——**只统计 `"plan"` 字段匹配当前 name 的条目**，用于校准本次 Phase 粒度。如无匹配条目，统计全部历史条目作为参考
+7. 探索相关代码，理解当前状态
+8. 如果任务描述不够清晰，向用户提问以澄清范围
 
 ### Step 2：拆分 Phase
 
@@ -49,21 +62,65 @@ argument-hint: "[task description, e.g. 实现用户认证系统]"
 - 如果 review-log.md 中记录了某类反复出现的问题，在相关 Phase 的步骤中**显式标注警告**
 - 例如 review-log.md 说"Claude 经常忘记更新测试"，则在每个 Phase 中加醒目的步骤：`⚠️ 同步更新对应测试文件`
 
-### Step 3：生成 plan.md
+### Step 2.5：识别关键假设 & 设计 Probe（极简验证）
 
-**保存位置**：项目根目录 `plan.md`
+**核心理念**：Plan 基于假设，假设可能是错的。在投入整个 Phase 实现之前，用极简脚本（Probe）验证最高风险的假设，让数据驱动方案选择，避免过度设计。
+
+**什么时候需要 Probe**：
+- 任务涉及**性能/并发/外部系统行为**等不确定因素
+- 方案选择依赖某个未验证的前提（如"X 库支持 Y 功能"、"Z 服务在 N 并发下不会超时"）
+- 直觉告诉你"应该是这样"，但你没有数据证明
+
+**Probe 设计原则**：
+- **极简**：单文件，<100 行，聚焦验证一个假设
+- **对照**：至少两组对比（如 方案A vs 方案B，共享 vs 独立，有负载 vs 无负载）
+- **量化**：输出数字而非"能/不能"（如推送次数、延迟毫秒、成功率百分比）
+- **一次性**：验证完即删除，不进入代码库
+
+**Probe 如何影响 Plan**：
+- 如果某个 Phase 的方案取决于一个未验证假设，将 Probe 安排在该 Phase 的**最前面**
+- Probe 结果可能导致后续步骤变化——在 Plan 中标注"分支点"：
+  ```
+  - [ ] 🔬 Probe: 验证 [假设描述]
+    - 如果假设成立 → 执行步骤 A1, A2
+    - 如果假设不成立 → 执行步骤 B1, B2
+  ```
+- 如果 Probe 推翻了整个 Phase 的前提，应在 Plan 中标注为**门控 Phase**（Gated Phase）
+
+**实战案例**：
+```
+场景：WebSocket 小币种数据缺失，怀疑是交易所不推送
+Probe 1: 独立脚本订阅 WS，统计推送频率 → 推翻假设（交易所正常推送）
+Probe 2: 共享实例 vs 独立实例对比 → 确认共享实例导致饥饿
+Probe 3: batch 模式 vs 全部 single 模式 → 推翻"去掉 batch 更好"的直觉
+
+三个 Probe 各 <100 行、<2 分钟运行，避免了三个错误方向：
+  ❌ 加 REST 兜底轮询（违反架构禁令）
+  ❌ 重构整个 WS 连接管理为 single 模式（适得其反 -32%）
+  ✅ 最终方案：仅分离 exchange 实例（最小改动，+37% 改善）
+```
+
+### Step 3：生成 plan-{name}.md
+
+**保存位置**：项目根目录 `plan-{name}.md`
 
 **严格使用以下格式**：
 
 ```markdown
 # 计划：[任务名称]
 
-> 执行方式：每个 Phase 开一个新会话，输入 /harness-resume 即可自动接力。
+> **Plan ID**: {name}
+> 执行方式：每个 Phase 开一个新会话，输入 `/harness-resume {name}` 即可自动接力。
 > 每个 Phase 结束时会自动更新进度、记录决策、触发轻量级 review。
 
 **目标**：[一句话描述]
 **技术方案**：[2-3句概述]
 **预估 Phase 数**：[N]
+
+### 关键假设 & 风险
+- [假设1]：[描述]——风险等级 [高/中/低]，需 Probe 验证：[是/否]
+- [假设2]：[描述]——风险等级 [高/中/低]，需 Probe 验证：[是/否]
+- [如果无高风险假设，写"无需 Probe，假设均基于已知事实"]
 
 ### 历史教训（来自 .harness/review-log.md）
 - [如果有，列出与本任务相关的历史失败模式和对策]
@@ -74,6 +131,10 @@ argument-hint: "[task description, e.g. 实现用户认证系统]"
 ## Phase 1: [名称] [状态: 待做]
 
 ### 任务
+- [ ] 🔬 Probe: [验证假设X]（如果本 Phase 有待验证的高风险假设）
+  - 预期输出：[量化指标]
+  - 如果假设成立 → [后续步骤方向]
+  - 如果假设不成立 → [备选方向]
 - [ ] 具体步骤 1（含文件路径）
 - [ ] 具体步骤 2
 - [ ] 编写对应测试
@@ -108,24 +169,31 @@ argument-hint: "[task description, e.g. 实现用户认证系统]"
 
 ### Step 4：向用户汇报
 
-1. 展示生成的计划概要（不要展示全文——用户可以自己读 plan.md）
-2. 如果纳入了历史教训，明确告知用户
-3. 提示下一步操作：
+1. 展示生成的计划概要（不要展示全文——用户可以自己读 plan-{name}.md）
+2. 列出当前目录下所有活跃的 plan 文件（`plan-*.md`），让用户了解并行状态
+3. 如果纳入了历史教训，明确告知用户
+4. 提示下一步操作：
 
 ```
-计划已写入 plan.md（共 [N] 个 Phase）。
+计划已写入 plan-{name}.md（共 [N] 个 Phase）。
+
+当前活跃计划：
+  • plan-{name}.md — [本次任务] (新建)
+  • plan-xxx.md — [其他任务] (Phase 2/4)
+  ...
 
 执行方式：
   • 当前会话执行：告诉我"执行 Phase 1"
-  • 新会话执行（推荐）：输入 /harness-resume
+  • 新会话执行（推荐）：输入 /harness-resume {name}
 
-提示：每个 Phase 完成后会自动更新 plan.md 并记录执行数据。
+提示：每个 Phase 完成后会自动更新 plan-{name}.md 并记录执行数据。
 ```
 
 ## 注意事项
 
-- plan.md 只写在项目根目录，不要放在子目录
+- plan 文件只写在项目根目录，不要放在子目录
+- 文件名格式固定为 `plan-{name}.md`，不允许使用 `plan.md`（无 name 后缀）
 - 每个 Phase 的步骤要具体到文件路径，不要写模糊的描述
 - 验证标准必须是可执行的命令，不要写"确保正常工作"这种话
-- 如果任务太小（预估 <30 分钟），告诉用户不需要 plan.md，直接做
+- 如果任务太小（预估 <30 分钟），告诉用户不需要 plan，直接做
 - 用中文输出
